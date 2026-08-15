@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Book } from "@/lib/types";
-import { getBooks, addBook, updateBook, deleteBook } from "@/lib/data";
 
-const emptyBook = {
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  description: string;
+  category: string;
+  year: number;
+  isbn: string;
+  available: boolean;
+  cover: string;
+}
+
+const emptyForm = {
   title: "",
   author: "",
   description: "",
@@ -23,9 +33,10 @@ export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyBook);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const [mounted, setMounted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -33,8 +44,15 @@ export default function AdminPage() {
     if (session === "true") setIsLoggedIn(true);
   }, []);
 
+  const fetchBooks = () => {
+    fetch("/api/books")
+      .then((res) => res.json())
+      .then((data) => setBooks(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  };
+
   useEffect(() => {
-    if (isLoggedIn) setBooks(getBooks());
+    if (isLoggedIn) fetchBooks();
   }, [isLoggedIn]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -47,23 +65,37 @@ export default function AdminPage() {
     }
   };
 
-  const refreshBooks = () => setBooks(getBooks());
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.author) {
       alert("Kitap adı ve yazar zorunludur!");
       return;
     }
-    if (editingId) {
-      updateBook(editingId, form);
-    } else {
-      addBook(form);
+
+    setSaving(true);
+    try {
+      if (editingId) {
+        await fetch(`/api/books/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      } else {
+        await fetch("/api/books", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      setShowForm(false);
+      fetchBooks();
+    } catch {
+      alert("Bir hata oluştu!");
+    } finally {
+      setSaving(false);
     }
-    setForm(emptyBook);
-    setEditingId(null);
-    setShowForm(false);
-    refreshBooks();
   };
 
   const handleEdit = (book: Book) => {
@@ -81,10 +113,10 @@ export default function AdminPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm("Bu kitabı silmek istediğinize emin misiniz?")) {
-      deleteBook(id);
-      refreshBooks();
+      await fetch(`/api/books/${id}`, { method: "DELETE" });
+      fetchBooks();
     }
   };
 
@@ -141,7 +173,7 @@ export default function AdminPage() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              setForm(emptyBook);
+              setForm(emptyForm);
               setEditingId(null);
               setShowForm(!showForm);
             }}
@@ -284,9 +316,10 @@ export default function AdminPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-amber-800 transition"
+            disabled={saving}
+            className="mt-4 bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-amber-800 transition disabled:opacity-50"
           >
-            {editingId ? "💾 Güncelle" : "➕ Ekle"}
+            {saving ? "Kaydediliyor..." : editingId ? "💾 Güncelle" : "➕ Ekle"}
           </button>
         </form>
       )}

@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Book } from "@/lib/types";
-import { getBooks } from "@/lib/data";
 import BookCard from "@/components/BookCard";
+
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  description: string;
+  category: string;
+  year: number;
+  isbn: string;
+  available: boolean;
+  cover: string;
+}
 
 const categories = ["Tümü", "Roman", "Bilim Kurgu", "Çocuk", "Bilim"];
 
@@ -11,21 +21,23 @@ export default function KitaplarPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Tümü");
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setBooks(getBooks());
-    setMounted(true);
+    fetch("/api/books")
+      .then((res) => res.json())
+      .then((data) => {
+        setBooks(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
-
-  if (!mounted) return null;
 
   const filtered = books.filter((book) => {
     const matchSearch =
       book.title.toLowerCase().includes(search.toLowerCase()) ||
       book.author.toLowerCase().includes(search.toLowerCase());
-    const matchCategory =
-      category === "Tümü" || book.category === category;
+    const matchCategory = category === "Tümü" || book.category === category;
     return matchSearch && matchCategory;
   });
 
@@ -60,7 +72,9 @@ export default function KitaplarPage() {
       </div>
 
       {/* Results */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-gray-400">Yükleniyor...</div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <span className="text-5xl block mb-4">🔍</span>
           <p className="text-lg">Kitap bulunamadı.</p>

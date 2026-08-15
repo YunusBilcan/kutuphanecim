@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Book } from "@/lib/types";
+
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  description: string;
+  category: string;
+  available: boolean;
+  cover: string;
+}
 
 export default function BookCard({ book }: { book: Book }) {
   return (

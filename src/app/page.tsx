@@ -1,21 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Book } from "@/lib/types";
-import { getBooks } from "@/lib/data";
 import BookCard from "@/components/BookCard";
 import Link from "next/link";
 
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  description: string;
+  category: string;
+  year: number;
+  isbn: string;
+  available: boolean;
+  cover: string;
+}
+
 export default function Home() {
   const [books, setBooks] = useState<Book[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setBooks(getBooks().slice(0, 4));
-    setMounted(true);
+    fetch("/api/books")
+      .then((res) => res.json())
+      .then((data) => {
+        setBooks(Array.isArray(data) ? data.slice(0, 4) : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
-
-  if (!mounted) return null;
 
   return (
     <div>
@@ -69,11 +82,15 @@ export default function Home() {
             Tümünü Gör →
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {books.map((book) => (
-            <BookCard key={book.id} book={book} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12 text-gray-400">Yükleniyor...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {books.map((book) => (
+              <BookCard key={book.id} book={book} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Footer */}
