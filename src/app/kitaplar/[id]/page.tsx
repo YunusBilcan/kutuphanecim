@@ -3,22 +3,45 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Book } from "@/lib/types";
-import { getBookById } from "@/lib/data";
+
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  description: string;
+  category: string;
+  year: number;
+  isbn: string;
+  available: boolean;
+  cover: string;
+}
 
 export default function BookDetail() {
   const params = useParams();
   const [book, setBook] = useState<Book | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const id = params.id as string;
-    const found = getBookById(id);
-    setBook(found || null);
-    setMounted(true);
+    fetch(`/api/books/${id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data) => {
+        setBook(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [params.id]);
 
-  if (!mounted) return null;
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-16 text-center text-gray-400">
+        Yükleniyor...
+      </div>
+    );
+  }
 
   if (!book) {
     return (
